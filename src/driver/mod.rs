@@ -7,5 +7,6 @@ enum Error {
 }
 
 trait Driver {
+    /// Returns a list of available devices.
     fn get_devices(&self) -> Result<Vec<Box<dyn Device>>, Error>;
 }
