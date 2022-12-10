@@ -9,18 +9,14 @@ pub trait Device {
 /// Describes a physical keyboard device.
 pub struct Keyboard {
     path: String,
+    name: String,
 }
 
 impl Keyboard {
-    pub fn new<T: Into<String>>(path: T) -> Self {
-        Self { path: path.into() }
-    }
-}
-
-impl From<&str> for Keyboard {
-    fn from(path: &str) -> Self {
+    pub fn new<T: Into<String>>(name: T, path: T) -> Self {
         Self {
-            path: path.to_string(),
+            name: name.into(),
+            path: path.into(),
         }
     }
 }
@@ -50,7 +46,7 @@ pub enum Status {
     Hold,
 }
 
-/// Describes a Key event and its status that occurs at a certain point in time.
+/// Describes an input event and its status that occurs at a certain point in time.
 pub struct InputFragment<T: Device> {
     key: Key<T>,
     status: Status,
@@ -67,7 +63,7 @@ impl<T: Device> InputFragment<T> {
     }
 }
 
-/// A Collection of InputFragments.
+/// A Collection of `InputFragments`.
 pub struct FragmentBundle<'a, T: 'a + Device> {
     fragments: Vec<&'a InputFragment<T>>,
 }

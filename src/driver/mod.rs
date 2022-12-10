@@ -1,8 +1,6 @@
 mod evdev;
 
-use ::evdev::Key;
-
-use crate::device::{Device, Keyboard};
+use crate::device::Device;
 
 enum Error {
     Unknown,

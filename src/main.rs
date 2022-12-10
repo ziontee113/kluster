@@ -1,3 +1,6 @@
+#![warn(clippy::pedantic)]
+#![allow(dead_code)]
+
 mod device;
 mod driver;
 
