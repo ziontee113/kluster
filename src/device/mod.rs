@@ -1,6 +1,36 @@
 #![allow(dead_code)]
 use std::time::SystemTime;
 
+/// A Device should be able to describe its file path in the Linux system.
+pub trait Device {
+    fn path(&self) -> &str;
+}
+
+/// Describes a physical keyboard device.
+pub struct Keyboard {
+    path: String,
+}
+
+impl Keyboard {
+    pub fn new<T: Into<String>>(path: T) -> Self {
+        Self { path: path.into() }
+    }
+}
+
+impl From<&str> for Keyboard {
+    fn from(path: &str) -> Self {
+        Self {
+            path: path.to_string(),
+        }
+    }
+}
+
+impl Device for Keyboard {
+    fn path(&self) -> &str {
+        self.path.as_ref()
+    }
+}
+
 /// Identifies a Key in a certain Device.
 pub struct Key<T: Device> {
     code: u16,
@@ -13,28 +43,6 @@ impl<T: Device> Key<T> {
     }
 }
 
-/// Describes a physical keyboard device.
-pub struct Keyboard {
-    path: String,
-}
-
-impl Keyboard {
-    pub fn new(path: String) -> Self {
-        Self { path }
-    }
-}
-
-/// A Device should be able to describe what is the file path in the Linux system.
-pub trait Device {
-    fn path(&self) -> &str;
-}
-
-impl Device for Keyboard {
-    fn path(&self) -> &str {
-        self.path.as_ref()
-    }
-}
-
 /// The status of a key at a certain time.
 pub enum Status {
     Up,
@@ -42,7 +50,7 @@ pub enum Status {
     Hold,
 }
 
-/// Describes a Key event and its status that occurs in a certain time.
+/// Describes a Key event and its status that occurs at a certain point in time.
 pub struct InputFragment<T: Device> {
     key: Key<T>,
     status: Status,
@@ -51,22 +59,27 @@ pub struct InputFragment<T: Device> {
 
 impl<T: Device> InputFragment<T> {
     pub fn new(key: Key<T>, status: Status, timestamp: SystemTime) -> Self {
-        Self { key, status, timestamp }
+        Self {
+            key,
+            status,
+            timestamp,
+        }
     }
 }
 
-pub struct FragmentBundle<T: Device> {
-    fragments: Vec<InputFragment<T>>,
+/// A Collection of InputFragments.
+pub struct FragmentBundle<'a, T: 'a + Device> {
+    fragments: Vec<&'a InputFragment<T>>,
 }
 
-impl<T: Device> FragmentBundle<T> {
-    pub fn new(fragments: Vec<InputFragment<T>>) -> Self {
+impl<'a, T: Device> FragmentBundle<'a, T> {
+    pub fn new(fragments: Vec<&'a InputFragment<T>>) -> Self {
         Self { fragments }
     }
 }
 
-impl<T: Device> From<Vec<InputFragment<T>>> for FragmentBundle<T> {
-    fn from(fragments: Vec<InputFragment<T>>) -> Self {
+impl<'a, T: Device> From<Vec<&'a InputFragment<T>>> for FragmentBundle<'a, T> {
+    fn from(fragments: Vec<&'a InputFragment<T>>) -> Self {
         Self { fragments }
     }
 }
