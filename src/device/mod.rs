@@ -4,6 +4,7 @@ use std::time::SystemTime;
 /// A Device should be able to describe its file path in the Linux system.
 pub trait Device {
     fn path(&self) -> &str;
+    fn name(&self) -> &str;
 }
 
 /// Describes a physical keyboard device.
@@ -25,6 +26,9 @@ impl Keyboard {
 impl Device for Keyboard {
     fn path(&self) -> &str {
         self.path.as_ref()
+    }
+    fn name(&self) -> &str {
+        self.name.as_ref()
     }
 }
 

@@ -23,4 +23,22 @@ impl Driver for Evdev {
             })
             .collect())
     }
+
+    /// Print devices' name and path if found.
+    fn print_devices(&self) {
+        match self.get_devices() {
+            Ok(devices) => {
+                if devices.is_empty() {
+                    println!("No devices found");
+                } else {
+                    for d in devices {
+                        println!("Device {} at {}", d.name(), d.path());
+                    }
+                }
+            }
+            Err(error) => {
+                println!("{:?}", error);
+            }
+        }
+    }
 }

@@ -15,6 +15,7 @@ use mockall::automock;
 #[cfg_attr(test, automock)]
 pub trait Driver {
     fn get_devices(&self) -> Result<Vec<Box<dyn Device>>, Error>;
+    fn print_devices(&self);
 }
 
 pub fn get_devices<T: Driver>(driver: &T) -> Result<Vec<Box<dyn Device>>, Error> {
