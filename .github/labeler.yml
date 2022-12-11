@@ -1,0 +1,18 @@
+device:
+  - src/device/*
+  - src/device/**/*
+
+driver:
+  - src/driver/*
+  - src/driver/**/*
+
+main:
+  - main.rs
+  - ./*.rs
+
+docs:
+  - README.md
+
+ci:
+  - .github/*
+  - .github/**/*
