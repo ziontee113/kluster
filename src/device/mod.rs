@@ -7,6 +7,7 @@ pub trait Device {
 }
 
 /// Describes a physical keyboard device.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Keyboard {
     path: String,
     name: String,

@@ -8,3 +8,4 @@ evdev = "0.12.*"
 
 [dev-dependencies]
 rstest = "0.16.*"
+mockall = "0.11.*"
