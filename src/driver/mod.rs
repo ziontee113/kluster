@@ -1,16 +1,14 @@
 mod evdev;
 
 use crate::device::Device;
+
 #[cfg(test)]
-use crate::device::Keyboard;
+use mockall::automock;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     Unknown,
 }
-
-#[cfg(test)]
-use mockall::automock;
 
 #[cfg_attr(test, automock)]
 pub trait Driver {
@@ -24,6 +22,7 @@ pub fn get_devices<T: Driver>(driver: &T) -> Result<Vec<Box<dyn Device>>, Error>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::device::Keyboard;
 
     #[test]
     fn get_devices_returns_an_error() {
