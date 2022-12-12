@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use std::{fmt::Display, time::SystemTime};
 
 /// A Device should be able to describe its file path in the Linux system.
