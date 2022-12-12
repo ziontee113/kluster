@@ -1,5 +1,14 @@
 use std::time::SystemTime;
 
+pub enum EventKind {
+    Keyboard,
+    Mouse,
+}
+
+pub trait Event {
+    fn event_kind(&self) -> EventKind;
+}
+
 pub struct Key {
     code: u16,
     path: String,
@@ -24,5 +33,11 @@ impl KeyboardEvent {
             state,
             timestamp,
         }
+    }
+}
+
+impl Event for KeyboardEvent {
+    fn event_kind(&self) -> EventKind {
+        EventKind::Keyboard
     }
 }
