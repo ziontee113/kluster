@@ -7,6 +7,7 @@ use crate::device::Keyboard;
 #[derive(Debug, PartialEq, Eq)]
 pub enum Error {
     Unknown,
+    NoDevicesFound,
 }
 
 #[cfg(test)]
@@ -16,6 +17,22 @@ use mockall::automock;
 pub trait Driver {
     fn get_devices(&self) -> Result<Vec<Box<dyn Device>>, Error>;
     fn print_devices(&self);
+
+    fn get_printable_devices(&self) -> Result<Vec<(String, String)>, Error> {
+        match self.get_devices() {
+            Ok(devices) => {
+                if devices.is_empty() {
+                    Err(Error::NoDevicesFound)
+                } else {
+                    Ok(devices
+                        .iter()
+                        .map(|d| (d.name().to_string(), d.path().to_string()))
+                        .collect())
+                }
+            }
+            Err(error) => Err(error),
+        }
+    }
 }
 
 pub fn get_devices<T: Driver>(driver: &T) -> Result<Vec<Box<dyn Device>>, Error> {
