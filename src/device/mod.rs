@@ -1,8 +1,8 @@
 #![allow(dead_code)]
-use std::time::SystemTime;
+use std::{fmt::Display, time::SystemTime};
 
 /// A Device should be able to describe its file path in the Linux system.
-pub trait Device {
+pub trait Device: Display {
     fn path(&self) -> &str;
 }
 
@@ -25,6 +25,12 @@ impl Keyboard {
 impl Device for Keyboard {
     fn path(&self) -> &str {
         self.path.as_ref()
+    }
+}
+
+impl Display for Keyboard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Keyboard: {} at: {}", self.name, self.path)
     }
 }
 
@@ -78,5 +84,19 @@ impl<'a, T: Device> FragmentBundle<'a, T> {
 impl<'a, T: Device> From<Vec<&'a InputFragment<T>>> for FragmentBundle<'a, T> {
     fn from(fragments: Vec<&'a InputFragment<T>>) -> Self {
         Self { fragments }
+    }
+}
+
+#[cfg(test)]
+mod device_test {
+    use super::*;
+
+    #[test]
+    fn can_dislay_keyboard_name_and_path() {
+        let keyboard = Keyboard::new("kb_name", "very/long/kb/path");
+        assert_eq!(
+            "Keyboard: kb_name at: very/long/kb/path",
+            keyboard.to_string()
+        );
     }
 }
