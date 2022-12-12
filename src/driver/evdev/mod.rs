@@ -26,10 +26,10 @@ impl Driver for Evdev {
 
     /// Print devices' name and path if found.
     fn print_devices(&self) {
-        match self.get_devices() {
+        match self.get_printable_devices() {
             Ok(devices) => {
-                for d in devices {
-                    println!("Device {} at {}", d.name(), d.path());
+                for (name, path) in devices {
+                    println!("Device {} at {}", name, path);
                 }
             }
             Err(error) => {
