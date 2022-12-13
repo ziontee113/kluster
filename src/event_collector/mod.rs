@@ -82,24 +82,52 @@ impl Event for KeyboardEvent {
     }
 }
 
+pub struct Union {
+    members: Vec<KeyboardEvent>,
+}
+
+impl Union {
+    pub fn new(members: Vec<KeyboardEvent>) -> Self {
+        Self { members }
+    }
+}
+
+pub enum InputElement {
+    Key(KeyboardEvent),
+    Union(Union),
+}
+
+#[derive(Default)]
 pub struct Collector {
-    pending_cluster_events: Vec<KeyboardEvent>,
+    pending_cluster: Vec<KeyboardEvent>,
+    sequence: Vec<InputElement>,
 }
 
 impl Collector {
     pub fn new() -> Self {
         Self {
-            pending_cluster_events: vec![],
+            ..Default::default()
         }
     }
+
+    pub fn pending_cluster(&self) -> &[KeyboardEvent] {
+        self.pending_cluster.as_ref()
+    }
+
+    pub fn sequence(&self) -> &[InputElement] {
+        self.sequence.as_ref()
+    }
+}
+
+impl Collector {
     pub fn receive(&mut self, event: &KeyboardEvent) {
         let cluster_interval_limit = 20;
 
         if event.state == KeyState::Down {
-            if self.pending_cluster_events.is_empty() {
-                self.pending_cluster_events.push(event.clone());
+            if self.pending_cluster.is_empty() {
+                self.pending_cluster.push(event.clone());
             } else {
-                let first_time = self.pending_cluster_events.first().unwrap().timestamp();
+                let first_time = self.pending_cluster.first().unwrap().timestamp();
                 if event
                     .timestamp()
                     .duration_since(first_time)
@@ -107,9 +135,22 @@ impl Collector {
                     .as_millis()
                     <= cluster_interval_limit
                 {
-                    self.pending_cluster_events.push(event.clone());
+                    self.pending_cluster.push(event.clone());
                 } else {
-                    // TODO:
+                    if !self.pending_cluster.is_empty() {
+                        if self.pending_cluster.len() == 1 {
+                            self.sequence
+                                .push(InputElement::Key(self.pending_cluster.pop().unwrap()));
+                        } else {
+                            let union = InputElement::Union(Union::new(
+                                self.pending_cluster.drain(0..).collect(),
+                            ));
+
+                            self.sequence.push(union);
+                        }
+                    }
+
+                    self.sequence.push(InputElement::Key(event.clone()));
                 }
             }
         }
