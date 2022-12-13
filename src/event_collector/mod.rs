@@ -14,12 +14,12 @@ pub trait Event {
 
 #[derive(Debug, Clone)]
 pub struct Key {
-    code: u16,
     path: String,
+    code: u16,
 }
 
 impl Key {
-    pub fn new(code: u16, path: &str) -> Self {
+    pub fn new(path: &str, code: u16) -> Self {
         Self {
             code,
             path: path.to_string(),
