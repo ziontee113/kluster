@@ -2,18 +2,21 @@ use crate::test_utilities::{i32_key_state_value_from_str, key_code_from_str, mip
 
 use super::*;
 
-macro_rules! ev{
-    ( $collector:ident receives: $a:ident $b:ident $c:ident $d:expr =>
-      $(sequence $sequence:expr)*, $(pending_cluster $pending_cluster:expr)* ) => {
+macro_rules! ev {
+    ( $collector:ident receives: $device:ident $key:ident $state:ident $time:expr =>
+      sequence $sequence:expr, pending_cluster $pending_cluster:expr ) => {
         let event = KeyboardEvent::new(
-            Key::new(stringify!($a), key_code_from_str(stringify!($b)).unwrap()),
-            i32_key_state_value_from_str(stringify!($c)),
-            mipoch($d),
+            Key::new(
+                stringify!($device),
+                key_code_from_str(stringify!($key)).unwrap(),
+            ),
+            i32_key_state_value_from_str(stringify!($state)),
+            mipoch($time),
         );
         $collector.receive(&event);
 
-        $( assert!( $collector.sequence().len() == $sequence ); )*
-        $( assert!( $collector.pending_cluster().len() == $pending_cluster ); )*
+        assert!($collector.sequence().len() == $sequence);
+        assert!($collector.pending_cluster().len() == $pending_cluster);
     };
 }
 
