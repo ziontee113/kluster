@@ -4,7 +4,7 @@ use super::*;
 
 macro_rules! ev {
     ( $collector:ident receives: $device:ident $key:ident $state:ident $time:expr =>
-      sequence $sequence:expr, pending_cluster $pending_cluster:expr ) => {
+      $($checker:ident $value:expr),+ ) => {
         let event = KeyboardEvent::new(
             Key::new(
                 stringify!($device),
@@ -15,8 +15,7 @@ macro_rules! ev {
         );
         $collector.receive(&event);
 
-        assert!($collector.sequence().len() == $sequence);
-        assert!($collector.pending_cluster().len() == $pending_cluster);
+        $( assert!($collector.$checker().len() == $value); )+
     };
 }
 
