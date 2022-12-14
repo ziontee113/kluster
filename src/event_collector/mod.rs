@@ -82,11 +82,11 @@ impl Event for KeyboardEvent {
     }
 }
 
-pub struct Union {
+pub struct Cluster {
     members: Vec<KeyboardEvent>,
 }
 
-impl Union {
+impl Cluster {
     pub fn new(members: Vec<KeyboardEvent>) -> Self {
         Self { members }
     }
@@ -94,7 +94,7 @@ impl Union {
 
 pub enum InputElement {
     Key(KeyboardEvent),
-    Union(Union),
+    Cluster(Cluster),
 }
 
 #[derive(Default)]
@@ -142,7 +142,7 @@ impl Collector {
                             self.sequence
                                 .push(InputElement::Key(self.pending_cluster.pop().unwrap()));
                         } else {
-                            let union = InputElement::Union(Union::new(
+                            let union = InputElement::Cluster(Cluster::new(
                                 self.pending_cluster.drain(0..).collect(),
                             ));
 
