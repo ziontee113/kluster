@@ -141,42 +141,59 @@ impl Collector {
 
         if event.state == KeyState::Down {
             if self.pending_cluster.is_empty() {
-                self.pending_cluster.push(event.clone());
+                self.add_to_pending_cluster(event);
             } else {
-                let first_time = self.pending_cluster.first().unwrap().timestamp();
+                let first_timestamp = self.pending_cluster.first().unwrap().timestamp();
                 let event_within_interval_limit = event
                     .timestamp()
-                    .duration_since(first_time)
+                    .duration_since(first_timestamp)
                     .unwrap()
                     .as_millis()
                     <= cluster_interval_limit;
 
                 if event_within_interval_limit {
-                    self.pending_cluster.push(event.clone());
+                    self.add_to_pending_cluster(event);
                 }
 
                 if !event_within_interval_limit {
                     if self.pending_cluster.len() == 1 {
-                        let popped_member = self.pending_cluster.pop().unwrap();
-                        self.sequence.push(InputElement::Key(popped_member));
+                        self.transfer_pending_cluster();
                     }
 
                     if self.pending_cluster.len() > 1 {
-                        let cluster = Cluster::new(self.pending_cluster.drain(0..).collect());
-                        let cluster = InputElement::Cluster(cluster);
-
-                        self.sequence.push(cluster);
+                        self.form_pending_cluster();
                     }
 
-                    // TODO: find a way to decouple this
-                    // this code exists to update the current_prefix if incoming event
-                    // outside of interval limit
+                    // update the current_prefix if incoming event outside of interval limit
+                    // do this before pushing latest `InputElement::Key` to `sequence`.
                     self.update_current_prefix();
 
                     self.sequence.push(InputElement::Key(event.clone()));
                 }
             }
         }
+    }
+
+    /// Push a *cloned* `event` into `pending_cluster`.
+    fn add_to_pending_cluster(&mut self, event: &KeyboardEvent) {
+        self.pending_cluster.push(event.clone());
+    }
+
+    /// Drain all `pending_cluster` elements, create new `InputElement`s from them,
+    /// then push them to `sequence`.
+    fn transfer_pending_cluster(&mut self) {
+        let members = self.pending_cluster.drain(..);
+        for member in members {
+            self.sequence.push(InputElement::Key(member));
+        }
+    }
+
+    /// Form new `Cluster` from `pending_cluster`
+    /// then push it to the `sequence`.
+    fn form_pending_cluster(&mut self) {
+        let cluster = Cluster::new(self.pending_cluster.drain(..).collect());
+        let cluster = InputElement::Cluster(cluster);
+        self.sequence.push(cluster);
     }
 
     fn update_current_prefix(&mut self) {
