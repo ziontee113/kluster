@@ -99,9 +99,9 @@ pub enum InputElement {
     Cluster(Cluster),
 }
 
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------------------- Pending Cluster
 
-enum PendingClusterState {
+pub enum PendingClusterState {
     Pending,
     Formed(InputElement),
     Rejected(Vec<InputElement>),
@@ -122,35 +122,50 @@ impl Default for PendingCluster {
 }
 
 impl PendingCluster {
-    /// Push a *cloned* `event` to `self.members`
+    pub fn state(&self) -> &PendingClusterState {
+        &self.state
+    }
+}
+
+impl PendingCluster {
+    /// Push *cloned* `event` to `self.members`
+    /// Change `self.state` to `PendingClusterState::Pending`
     fn add(&mut self, event: &KeyboardEvent) {
         self.members.push(event.clone());
         self.state = PendingClusterState::Pending;
     }
 
+    /// Form a Cluster from *drained* `self.members`.
+    /// Change `self.state` to `PendingClusterState::Formed()`
     fn form(&mut self) {
         let cluster = Cluster::new(self.members.drain(..).collect());
         let element = InputElement::Cluster(cluster);
         self.state = PendingClusterState::Formed(element);
     }
 
+    /// *Drain* `self.members`.
+    /// Change `self.state` to `PendingClusterState::Rejected()`
     fn reject(&mut self) {
         let elements: Vec<InputElement> = self.members.drain(..).map(InputElement::Key).collect();
         self.state = PendingClusterState::Rejected(elements);
     }
 
+    fn handle_key_down_event(&mut self, event: &KeyboardEvent, limit: u128) {
+        if self.members.is_empty() || self.incoming_event_fits_in_interval_limit(event, limit) {
+            self.add(event);
+        } else {
+            if self.has_single_member() {
+                self.reject();
+            }
+            if self.has_multiple_members() {
+                self.form();
+            }
+        }
+    }
+
     fn update(&mut self, event: &KeyboardEvent, limit: u128) {
         if event.state() == KeyState::Down {
-            if self.members.is_empty() || self.incoming_event_fits_in_interval_limit(event, limit) {
-                self.add(event);
-            } else {
-                if self.has_single_member() {
-                    self.reject();
-                }
-                if self.has_multiple_members() {
-                    self.form();
-                }
-            }
+            self.handle_key_down_event(event, limit);
         }
     }
 
@@ -177,10 +192,46 @@ impl PendingCluster {
     }
 }
 
+// --------------------------------------------------------------------------- Sequence
+
 #[derive(Default)]
 pub struct Sequence {
     elements: Vec<InputElement>,
 }
+
+impl Sequence {
+    pub fn elements(&self) -> &[InputElement] {
+        self.elements.as_ref()
+    }
+}
+
+impl Sequence {
+    fn add_element(&mut self, element: &InputElement) {
+        self.elements.push(element.clone());
+    }
+
+    fn add_key_event(&mut self, event: &KeyboardEvent) {
+        self.elements.push(InputElement::Key(event.clone()));
+    }
+
+    fn update(&mut self, event: &KeyboardEvent, pending_cluster_state: &PendingClusterState) {
+        match pending_cluster_state {
+            PendingClusterState::Pending => {}
+            PendingClusterState::Formed(cluster_element) => {
+                self.add_element(cluster_element);
+                self.add_key_event(event);
+            }
+            PendingClusterState::Rejected(key_elements) => {
+                for e in key_elements {
+                    self.add_element(e);
+                }
+                self.add_key_event(event);
+            }
+        }
+    }
+}
+
+// --------------------------------------------------------------------------- Collector
 
 #[derive(Default)]
 pub struct Collector {
@@ -203,5 +254,6 @@ impl Collector {
         let cluster_interval_limit = 20;
 
         self.pending_cluster.update(event, cluster_interval_limit);
+        self.sequence.update(event, &self.pending_cluster.state);
     }
 }
