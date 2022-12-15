@@ -12,7 +12,7 @@ pub trait Event {
     fn event_kind(&self) -> EventKind;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Key {
     path: String,
     code: u16,
@@ -47,7 +47,7 @@ impl From<i32> for KeyState {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct KeyboardEvent {
     key: Key,
     state: KeyState,
@@ -82,6 +82,7 @@ impl Event for KeyboardEvent {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Cluster {
     members: Vec<KeyboardEvent>,
 }
@@ -92,6 +93,7 @@ impl Cluster {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum InputElement {
     Key(KeyboardEvent),
     Cluster(Cluster),
@@ -101,6 +103,9 @@ pub enum InputElement {
 pub struct Collector {
     pending_cluster: Vec<KeyboardEvent>,
     sequence: Vec<InputElement>,
+
+    current_prefix: Vec<InputElement>,
+    latest_event: Option<KeyboardEvent>,
 }
 
 impl Collector {
@@ -117,42 +122,64 @@ impl Collector {
     pub fn sequence(&self) -> &[InputElement] {
         self.sequence.as_ref()
     }
+
+    pub fn latest_event(&self) -> Option<&KeyboardEvent> {
+        self.latest_event.as_ref()
+    }
+
+    pub fn current_prefix(&self) -> &[InputElement] {
+        self.current_prefix.as_ref()
+    }
 }
 
 impl Collector {
     pub fn receive(&mut self, event: &KeyboardEvent) {
         let cluster_interval_limit = 20;
 
+        self.latest_event = Some(event.clone());
+        self.update_current_prefix();
+
         if event.state == KeyState::Down {
             if self.pending_cluster.is_empty() {
                 self.pending_cluster.push(event.clone());
             } else {
                 let first_time = self.pending_cluster.first().unwrap().timestamp();
-                if event
+                let event_within_interval_limit = event
                     .timestamp()
                     .duration_since(first_time)
                     .unwrap()
                     .as_millis()
-                    <= cluster_interval_limit
-                {
-                    self.pending_cluster.push(event.clone());
-                } else {
-                    if !self.pending_cluster.is_empty() {
-                        if self.pending_cluster.len() == 1 {
-                            self.sequence
-                                .push(InputElement::Key(self.pending_cluster.pop().unwrap()));
-                        } else {
-                            let union = InputElement::Cluster(Cluster::new(
-                                self.pending_cluster.drain(0..).collect(),
-                            ));
+                    <= cluster_interval_limit;
 
-                            self.sequence.push(union);
-                        }
+                if event_within_interval_limit {
+                    self.pending_cluster.push(event.clone());
+                }
+
+                if !event_within_interval_limit {
+                    if self.pending_cluster.len() == 1 {
+                        let popped_member = self.pending_cluster.pop().unwrap();
+                        self.sequence.push(InputElement::Key(popped_member));
                     }
+
+                    if self.pending_cluster.len() > 1 {
+                        let cluster = Cluster::new(self.pending_cluster.drain(0..).collect());
+                        let cluster = InputElement::Cluster(cluster);
+
+                        self.sequence.push(cluster);
+                    }
+
+                    // TODO: find a way to decouple this
+                    // this code exists to update the current_prefix if incoming event
+                    // outside of interval limit
+                    self.update_current_prefix();
 
                     self.sequence.push(InputElement::Key(event.clone()));
                 }
             }
         }
+    }
+
+    fn update_current_prefix(&mut self) {
+        self.current_prefix = self.sequence.clone();
     }
 }
