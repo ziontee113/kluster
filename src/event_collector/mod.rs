@@ -141,41 +141,66 @@ impl Collector {
 
         if event.state == KeyState::Down {
             if self.pending_cluster.is_empty() {
-                self.add_to_pending_cluster(event);
+                self.add_event_to_pending_cluster(event);
             } else {
-                let first_timestamp = self.pending_cluster.first().unwrap().timestamp();
-                let event_within_interval_limit = event
-                    .timestamp()
-                    .duration_since(first_timestamp)
-                    .unwrap()
-                    .as_millis()
-                    <= cluster_interval_limit;
+                let event_within_interval =
+                    self.incoming_event_falls_within_interval_limit(event, cluster_interval_limit);
 
-                if event_within_interval_limit {
-                    self.add_to_pending_cluster(event);
+                if event_within_interval {
+                    self.add_event_to_pending_cluster(event);
                 }
 
-                if !event_within_interval_limit {
-                    if self.pending_cluster.len() == 1 {
+                if !event_within_interval {
+                    if self.has_single_pending_cluster_member() {
                         self.transfer_pending_cluster();
                     }
 
-                    if self.pending_cluster.len() > 1 {
+                    if self.has_multiple_pending_cluster_members() {
                         self.form_pending_cluster();
                     }
 
-                    // update the current_prefix if incoming event outside of interval limit
+                    // update the `current_prefix` if incoming event outside of interval limit
                     // do this before pushing latest `InputElement::Key` to `sequence`.
                     self.update_current_prefix();
 
-                    self.sequence.push(InputElement::Key(event.clone()));
+                    self.add_key_event_to_sequence(event);
                 }
             }
         }
     }
 
+    fn has_multiple_pending_cluster_members(&mut self) -> bool {
+        self.pending_cluster.len() > 1
+    }
+
+    fn has_single_pending_cluster_member(&mut self) -> bool {
+        self.pending_cluster.len() == 1
+    }
+
+    /// Crates new `InputElement::Key` from `event`, then push it to `sequence`.
+    fn add_key_event_to_sequence(&mut self, event: &KeyboardEvent) {
+        let key_element = InputElement::Key(event.clone());
+        self.sequence.push(key_element);
+    }
+
+    /// Checks if incoming `event`'s `timestamp`'s duration since `pending_cluster`'s first member's `timestamp`
+    /// is below `cluster_interval_limit`.
+    fn incoming_event_falls_within_interval_limit(
+        &mut self,
+        event: &KeyboardEvent,
+        cluster_interval_limit: u128,
+    ) -> bool {
+        let first_timestamp = self.pending_cluster.first().unwrap().timestamp();
+        event
+            .timestamp()
+            .duration_since(first_timestamp)
+            .unwrap()
+            .as_millis()
+            <= cluster_interval_limit
+    }
+
     /// Push a *cloned* `event` into `pending_cluster`.
-    fn add_to_pending_cluster(&mut self, event: &KeyboardEvent) {
+    fn add_event_to_pending_cluster(&mut self, event: &KeyboardEvent) {
         self.pending_cluster.push(event.clone());
     }
 
@@ -196,6 +221,7 @@ impl Collector {
         self.sequence.push(cluster);
     }
 
+    /// Updates `current_prefix` field with the current `sequence` field *cloned*
     fn update_current_prefix(&mut self) {
         self.current_prefix = self.sequence.clone();
     }
