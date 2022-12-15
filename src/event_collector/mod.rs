@@ -104,7 +104,7 @@ pub struct Collector {
     pending_cluster: Vec<KeyboardEvent>,
     sequence: Vec<InputElement>,
 
-    current_prefix: Vec<InputElement>,
+    current_modifier: Vec<InputElement>,
     latest_event: Option<KeyboardEvent>,
 }
 
@@ -127,8 +127,8 @@ impl Collector {
         self.latest_event.as_ref()
     }
 
-    pub fn current_prefix(&self) -> &[InputElement] {
-        self.current_prefix.as_ref()
+    pub fn current_modifier(&self) -> &[InputElement] {
+        self.current_modifier.as_ref()
     }
 }
 
@@ -137,7 +137,7 @@ impl Collector {
         let cluster_interval_limit = 20;
 
         self.update_latest_event(event);
-        self.update_current_prefix();
+        self.update_current_modifier();
 
         if event.state == KeyState::Down {
             if self.pending_cluster.is_empty() {
@@ -152,7 +152,7 @@ impl Collector {
 
                 if !event_within_interval {
                     self.transfer_or_form_pending_cluster();
-                    self.update_current_prefix();
+                    self.update_current_modifier();
                     self.add_key_event_to_sequence(event);
                 }
             }
@@ -229,8 +229,8 @@ impl Collector {
         self.latest_event = Some(event.clone());
     }
 
-    /// Replaces `current_prefix` field with the current `sequence` field *cloned*
-    fn update_current_prefix(&mut self) {
-        self.current_prefix = self.sequence.clone();
+    /// Replaces `current_modifier` field with the current `sequence` field *cloned*
+    fn update_current_modifier(&mut self) {
+        self.current_modifier = self.sequence.clone();
     }
 }

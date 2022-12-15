@@ -76,11 +76,11 @@ fn can_record_current_prefix() {
     let mut collector = Collector::new();
 
     ev!(collector receives: L1 F Down 0);
-    assert_eq!(*collector.current_prefix(), vec![]);
+    assert_eq!(*collector.current_modifier(), vec![]);
 
     ev!(collector receives: R1 J Down 100);
     assert_eq!(
-        *collector.current_prefix(),
+        *collector.current_modifier(),
         vec![InputElement::Key(keyboard_event!(L1 F Down 0)),]
     );
 }
