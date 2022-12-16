@@ -101,6 +101,7 @@ pub enum InputElement {
 
 // --------------------------------------------------------------------------- Pending Cluster
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum PendingClusterState {
     Pending,
     Formed(InputElement),
@@ -170,7 +171,7 @@ impl PendingCluster {
     }
 
     fn incoming_event_fits_in_interval_limit(
-        &mut self,
+        &self,
         event: &KeyboardEvent,
         cluster_interval_limit: u128,
     ) -> bool {
@@ -180,7 +181,7 @@ impl PendingCluster {
             .duration_since(first_member_timestamp)
             .unwrap()
             .as_millis()
-            > cluster_interval_limit
+            <= cluster_interval_limit
     }
 
     fn has_multiple_members(&mut self) -> bool {
@@ -206,14 +207,18 @@ impl Sequence {
 }
 
 impl Sequence {
+    /// Push *cloned* `InputElement` to `self.elements`
     fn add_element(&mut self, element: &InputElement) {
         self.elements.push(element.clone());
     }
 
+    /// Create an `InputElement::Key` from *cloned* `event`,
+    /// then push it to `self.elements`
     fn add_key_event(&mut self, event: &KeyboardEvent) {
         self.elements.push(InputElement::Key(event.clone()));
     }
 
+    /// Base on `PendingClusterState`, add elements accordingly.
     fn update(&mut self, event: &KeyboardEvent, pending_cluster_state: &PendingClusterState) {
         match pending_cluster_state {
             PendingClusterState::Pending => {}
@@ -240,6 +245,12 @@ pub struct Collector {
 }
 
 impl Collector {
+    pub fn new() -> Self {
+        Self {
+            ..Default::default()
+        }
+    }
+
     pub fn pending_cluster(&self) -> &PendingCluster {
         &self.pending_cluster
     }
