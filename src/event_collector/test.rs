@@ -44,12 +44,29 @@ macro_rules! ev {
         ));
         ev!(@ $collector $($tail)*);
     }};
-    // passert ending_cluster state: variants without (..)
+    // assert ending_cluster state: variants without (..)
     (@ $collector:ident pending_cluster state: $variant:ident $($tail:tt)*) => {{
         assert!(matches!(
             *$collector.pending_cluster().state(),
             PendingClusterState::$variant
         ));
+        ev!(@ $collector $($tail)*);
+    }};
+
+    // assert formed Cluster, with wanted_members[]
+    (@ $collector:ident with members:
+        [$($d:ident $k:ident $s:ident $t:expr),*] $($tail:tt)*) => {{
+
+        let wanted_members = vec![ $(keyboard_event!($d $k $s $t),)* ];
+        let state = $collector.pending_cluster().state();
+
+        #[allow(clippy::collapsible_match)]
+        if let PendingClusterState::Formed(cluster_element) = state {
+            if let InputElement::Cluster(cluster) = cluster_element {
+                assert_eq!(cluster.members(), wanted_members);
+            }
+        }
+
         ev!(@ $collector $($tail)*);
     }};
 }
@@ -59,12 +76,14 @@ fn my_test() {
     let mut collector = Collector::new();
     ev!(collector
          receives: L1 D Down 0;
-         pending_cluster state: Pending
+             pending_cluster state: Pending
 
          receives: L1 F Down 4;
-         pending_cluster state: Pending
+             pending_cluster state: Pending
 
          receives: R1 J Down 22;
-         pending_cluster state: Formed(..)
+             pending_cluster state: Formed(..)
+             with members:
+                [L1 D Down 0, L1 F Down 4]
     );
 }

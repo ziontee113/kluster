@@ -91,6 +91,10 @@ impl Cluster {
     pub fn new(members: Vec<KeyboardEvent>) -> Self {
         Self { members }
     }
+
+    pub fn members(&self) -> &[KeyboardEvent] {
+        self.members.as_ref()
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
